@@ -1,4 +1,4 @@
-module kusion-module-framework
+module kusionstack.io/kusion-module-framework
 
 go 1.22
 
