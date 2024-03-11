@@ -4,7 +4,7 @@ import (
 	"github.com/hashicorp/go-plugin"
 	"kusionstack.io/kusion/pkg/modules"
 
-	"kusion-module-framework/pkg/module"
+	"kusionstack.io/kusion-module-framework/pkg/module"
 )
 
 // HandshakeConfig is a common handshake that is shared by plugin and host.
