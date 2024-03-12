@@ -1,10 +1,18 @@
 package module
 
 import (
+	"errors"
+	"fmt"
+	"strings"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	v1 "kusionstack.io/kusion/pkg/apis/core/v1"
 )
+
+var ErrEmptyTFProviderVersion = errors.New("empty terraform provider version")
+
+var defaultTFHost = "registry.terraform.io"
 
 func WrapK8sResourceToKusionResource(id string, resource any) (*v1.Resource, error) {
 	gvk := resource.(runtime.Object).GetObjectKind().GroupVersionKind().String()
@@ -48,4 +56,84 @@ func UniqueAppLabels(projectName, appName string) map[string]string {
 		"app.kubernetes.io/part-of": projectName,
 		"app.kubernetes.io/name":    appName,
 	}
+}
+
+// WrapTFResourceToKusionResource wraps the Terraform resource into the format of
+// the Kusion resource.
+func WrapTFResourceToKusionResource(id string,
+	attributes, extensions map[string]any,
+	denpendsOn []string,
+) (*v1.Resource, error) {
+	return &v1.Resource{
+		ID:         id,
+		Type:       v1.Terraform,
+		Attributes: attributes,
+		DependsOn:  denpendsOn,
+		Extensions: extensions,
+	}, nil
+}
+
+// TerraformResourceID returns the Kusion resource ID of the Terraform resource.
+func TerraformResourceID(providerCfg v1.ProviderConfig, resType, resName string) (string, error) {
+	if providerCfg.Version == "" {
+		return "", ErrEmptyTFProviderVersion
+	}
+
+	var providerNamespace, providerName string
+	srcAttrs := strings.Split(providerCfg.Source, "/")
+	if len(srcAttrs) == 3 {
+		providerNamespace = srcAttrs[1]
+		providerName = srcAttrs[2]
+	} else if len(srcAttrs) == 2 {
+		providerNamespace = srcAttrs[0]
+		providerName = srcAttrs[1]
+	} else {
+		return "", fmt.Errorf("invalid terraform provider source: %s", providerCfg.Source)
+	}
+
+	return strings.Join([]string{
+		providerNamespace,
+		providerName,
+		resType,
+		resName,
+	}, ":"), nil
+}
+
+// TerraformProviderExtensions returns the Kusion resource extension of the Terraform provider.
+func TerraformProviderExtensions(providerCfg v1.ProviderConfig,
+	providerMeta map[string]any, resType string,
+) (map[string]any, error) {
+	if providerCfg.Version == "" {
+		return nil, ErrEmptyTFProviderVersion
+	}
+
+	// Conduct whether to use the default Terraform provider registry host
+	// according to the source of the provider config.
+	// For example, "hashicorp/aws" means using the default TF provider registry,
+	// while "registry.customized.io/hashicorp/aws" implies to use a customized registry host.
+	var providerURL string
+	srcAttrs := strings.Split(providerCfg.Source, "/")
+	if len(srcAttrs) == 3 {
+		providerURL = strings.Join([]string{providerCfg.Source, providerCfg.Version}, "/")
+	} else if len(srcAttrs) == 2 {
+		providerURL = strings.Join([]string{defaultTFHost, providerCfg.Source, providerCfg.Version}, "/")
+	} else {
+		return nil, fmt.Errorf("invalid terraform provider source: %s", providerCfg.Source)
+	}
+
+	return map[string]any{
+		"provider":     providerURL,
+		"providerMeta": providerMeta,
+		"resourceType": resType,
+	}, nil
+}
+
+// TerraformProviderRegion returns the resource region from the Terraform provider configs.
+func TerraformProviderRegion(providerCfg v1.ProviderConfig) string {
+	region, ok := providerCfg.GenericConfig["region"]
+	if !ok {
+		return ""
+	}
+
+	return region.(string)
 }
