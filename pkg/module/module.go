@@ -4,8 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"gopkg.in/yaml.v2"
-	"kusionstack.io/kusion/pkg/apis/core/v1"
+	yamlv2 "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
+	v1 "kusionstack.io/kusion/pkg/apis/core/v1"
 	"kusionstack.io/kusion/pkg/apis/core/v1/workload"
 	"kusionstack.io/kusion/pkg/log"
 	"kusionstack.io/kusion/pkg/modules/proto"
@@ -85,7 +86,6 @@ type GeneratorResponse struct {
 }
 
 func NewGeneratorRequest(req *proto.GeneratorRequest) (*GeneratorRequest, error) {
-
 	log.Infof("module proto request received:%s", req.String())
 
 	// validate workload
@@ -93,7 +93,7 @@ func NewGeneratorRequest(req *proto.GeneratorRequest) (*GeneratorRequest, error)
 		return nil, fmt.Errorf("workload in the request is nil")
 	}
 	w := &workload.Workload{}
-	if err := yaml.Unmarshal(req.Workload, w); err != nil {
+	if err := yamlv2.Unmarshal(req.Workload, w); err != nil {
 		return nil, fmt.Errorf("unmarshal workload failed. %w", err)
 	}
 
