@@ -75,8 +75,6 @@ type GeneratorRequest struct {
 	DevModuleConfig v1.Accessory `json:"dev_module_config,omitempty" yaml:"devModuleConfig"`
 	// PlatformModuleConfig is the platform engineer's inputs of this module
 	PlatformModuleConfig v1.GenericConfig `json:"platform_module_config,omitempty" yaml:"platformModuleConfig"`
-	// RuntimeConfig is the runtime configurations defined in the workspace config
-	RuntimeConfig *v1.RuntimeConfigs `json:"runtime_config,omitempty" yaml:"runtimeConfig"`
 }
 
 type GeneratorResponse struct {
@@ -111,13 +109,6 @@ func NewGeneratorRequest(req *proto.GeneratorRequest) (*GeneratorRequest, error)
 		}
 	}
 
-	var rc *v1.RuntimeConfigs
-	if req.RuntimeConfig != nil {
-		if err := yaml.Unmarshal(req.RuntimeConfig, rc); err != nil {
-			return nil, fmt.Errorf("unmarshal runtime config failed. %w", err)
-		}
-	}
-
 	result := &GeneratorRequest{
 		Project:              req.Project,
 		Stack:                req.Stack,
@@ -125,7 +116,6 @@ func NewGeneratorRequest(req *proto.GeneratorRequest) (*GeneratorRequest, error)
 		Workload:             w,
 		DevModuleConfig:      dc,
 		PlatformModuleConfig: pc,
-		RuntimeConfig:        rc,
 	}
 	out, err := yaml.Marshal(result)
 	if err != nil {
