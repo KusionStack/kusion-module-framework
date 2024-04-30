@@ -7,7 +7,8 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	v1 "kusionstack.io/kusion/pkg/apis/core/v1"
+
+	v1 "kusionstack.io/kusion/pkg/apis/api.kusion.io/v1"
 )
 
 var ErrEmptyTFProviderVersion = errors.New("empty terraform provider version")
