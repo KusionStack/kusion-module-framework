@@ -61,7 +61,8 @@ func UniqueAppLabels(projectName, appName string) map[string]string {
 
 // WrapTFResourceToKusionResource wraps the Terraform resource into the format of
 // the Kusion resource.
-func WrapTFResourceToKusionResource(id string,
+func WrapTFResourceToKusionResource(
+	id string,
 	attributes, extensions map[string]any,
 	denpendsOn []string,
 ) (*v1.Resource, error) {
@@ -74,8 +75,23 @@ func WrapTFResourceToKusionResource(id string,
 	}, nil
 }
 
+// ProviderConfig contains the full configurations of a specified provider. It is the combination
+// of the specified provider's config in blocks "terraform/required_providers" and "providers" in
+// terraform hcl file, where the former is described by fields Source and Version, and the latter
+// is described by GenericConfig cause different provider has different config.
+type ProviderConfig struct {
+	// Source of the provider.
+	Source string `yaml:"source" json:"source"`
+
+	// Version of the provider.
+	Version string `yaml:"version" json:"version"`
+
+	// GenericConfig is used to describe the config of a specified terraform provider.
+	v1.GenericConfig `yaml:",inline,omitempty" json:",inline,omitempty"`
+}
+
 // TerraformResourceID returns the Kusion resource ID of the Terraform resource.
-func TerraformResourceID(providerCfg v1.ProviderConfig, resType, resName string) (string, error) {
+func TerraformResourceID(providerCfg ProviderConfig, resType, resName string) (string, error) {
 	if providerCfg.Version == "" {
 		return "", ErrEmptyTFProviderVersion
 	}
@@ -101,7 +117,8 @@ func TerraformResourceID(providerCfg v1.ProviderConfig, resType, resName string)
 }
 
 // TerraformProviderExtensions returns the Kusion resource extension of the Terraform provider.
-func TerraformProviderExtensions(providerCfg v1.ProviderConfig,
+func TerraformProviderExtensions(
+	providerCfg ProviderConfig,
 	providerMeta map[string]any, resType string,
 ) (map[string]any, error) {
 	if providerCfg.Version == "" {
@@ -130,7 +147,7 @@ func TerraformProviderExtensions(providerCfg v1.ProviderConfig,
 }
 
 // TerraformProviderRegion returns the resource region from the Terraform provider configs.
-func TerraformProviderRegion(providerCfg v1.ProviderConfig) string {
+func TerraformProviderRegion(providerCfg ProviderConfig) string {
 	region, ok := providerCfg.GenericConfig["region"]
 	if !ok {
 		return ""

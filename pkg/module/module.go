@@ -6,9 +6,7 @@ import (
 
 	yamlv2 "gopkg.in/yaml.v2"
 	"gopkg.in/yaml.v3"
-
-	apiv1 "kusionstack.io/kusion/pkg/apis/api.kusion.io/v1"
-	internalv1 "kusionstack.io/kusion/pkg/apis/internal.kusion.io/v1"
+	v1 "kusionstack.io/kusion/pkg/apis/api.kusion.io/v1"
 	"kusionstack.io/kusion/pkg/log"
 	"kusionstack.io/kusion/pkg/modules/proto"
 )
@@ -65,23 +63,25 @@ func (f *FrameworkModuleWrapper) Generate(ctx context.Context, req *proto.Genera
 
 type GeneratorRequest struct {
 	// Project represents the project name
-	Project string `json:"project,omitempty" yaml:"project"`
+	Project string `json:"project" yaml:"project"`
 	// Stack represents the stack name
-	Stack string `json:"stack,omitempty" yaml:"stack"`
+	Stack string `json:"stack" yaml:"stack"`
 	// App represents the application name, which is typically the same as the namespace of Kubernetes resources
-	App string `json:"app,omitempty" yaml:"app"`
+	App string `json:"app" yaml:"app"`
 	// Workload represents the workload configuration
-	Workload *internalv1.Workload `json:"workload,omitempty" yaml:"workload"`
-	// DevModuleConfig is the developer's inputs of this module
-	DevModuleConfig internalv1.Accessory `json:"dev_module_config,omitempty" yaml:"devModuleConfig"`
-	// PlatformModuleConfig is the platform engineer's inputs of this module
-	PlatformModuleConfig apiv1.GenericConfig `json:"platform_module_config,omitempty" yaml:"platformModuleConfig"`
+	Workload *v1.Workload `json:"workload,omitempty" yaml:"workload,omitempty"`
+	// DevConfig is the developer's inputs of this module
+	DevConfig v1.Accessory `json:"devConfig,omitempty" yaml:"devConfig,omitempty"`
+	// PlatformConfig is the platform engineer's inputs of this module
+	PlatformConfig v1.GenericConfig `json:"platformConfig,omitempty" yaml:"platformConfig,omitempty"`
+	// Context contains workspace-level configurations, such as topologies, server endpoints, metadata, etc.
+	Context v1.GenericConfig `yaml:"context,omitempty" json:"context,omitempty"`
 }
 
 type GeneratorResponse struct {
 	// Resources represents the generated resources
-	Resources []apiv1.Resource     `json:"resources,omitempty" yaml:"resources"`
-	Patchers  []internalv1.Patcher `json:"patchers,omitempty" yaml:"patchers"`
+	Resources []v1.Resource `json:"resources,omitempty" yaml:"resources,omitempty"`
+	Patchers  []v1.Patcher  `json:"patchers,omitempty" yaml:"patchers,omitempty"`
 }
 
 func NewGeneratorRequest(req *proto.GeneratorRequest) (*GeneratorRequest, error) {
@@ -91,32 +91,40 @@ func NewGeneratorRequest(req *proto.GeneratorRequest) (*GeneratorRequest, error)
 	if req.Workload == nil {
 		return nil, fmt.Errorf("workload in the request is nil")
 	}
-	w := &internalv1.Workload{}
+	w := &v1.Workload{}
 	if err := yamlv2.Unmarshal(req.Workload, w); err != nil {
 		return nil, fmt.Errorf("unmarshal workload failed. %w", err)
 	}
 
-	var dc internalv1.Accessory
-	if req.DevModuleConfig != nil {
-		if err := yaml.Unmarshal(req.DevModuleConfig, &dc); err != nil {
-			return nil, fmt.Errorf("unmarshal dev module config failed. %w", err)
+	var dc v1.Accessory
+	if req.DevConfig != nil {
+		if err := yaml.Unmarshal(req.DevConfig, &dc); err != nil {
+			return nil, fmt.Errorf("unmarshal dev config failed. %w", err)
 		}
 	}
 
-	var pc apiv1.GenericConfig
-	if req.PlatformModuleConfig != nil {
-		if err := yaml.Unmarshal(req.PlatformModuleConfig, &pc); err != nil {
+	var pc v1.GenericConfig
+	if req.PlatformConfig != nil {
+		if err := yaml.Unmarshal(req.PlatformConfig, &pc); err != nil {
 			return nil, fmt.Errorf("unmarshal platform module config failed. %w", err)
 		}
 	}
 
+	var ctx v1.GenericConfig
+	if req.Context != nil {
+		if err := yaml.Unmarshal(req.Context, &ctx); err != nil {
+			return nil, fmt.Errorf("unmarshal context failed. %w", err)
+		}
+	}
+
 	result := &GeneratorRequest{
-		Project:              req.Project,
-		Stack:                req.Stack,
-		App:                  req.App,
-		Workload:             w,
-		DevModuleConfig:      dc,
-		PlatformModuleConfig: pc,
+		Project:        req.Project,
+		Stack:          req.Stack,
+		App:            req.App,
+		Workload:       w,
+		DevConfig:      dc,
+		PlatformConfig: pc,
+		Context:        ctx,
 	}
 	out, err := yaml.Marshal(result)
 	if err != nil {
