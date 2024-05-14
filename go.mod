@@ -7,7 +7,7 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/apimachinery v0.30.0
-	kusionstack.io/kusion v0.11.1
+	kusionstack.io/kusion v0.11.2-0.20240514022203-5ca1c8269c4d
 )
 
 require (
