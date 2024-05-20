@@ -185,8 +185,8 @@ k8s.io/utils v0.0.0-20230726121419-3b25d923346b h1:sgn3ZU783SCgtaSJjpcVVlRqd6GSn
 k8s.io/utils v0.0.0-20230726121419-3b25d923346b/go.mod h1:OLgZIPagt7ERELqWJFomSt595RzquPNLL48iOWgYOg0=
 kcl-lang.io/kcl-plugin v0.5.0 h1:eoh6y4l81rwA8yhJXU4hN7YmJeTUNB1nfYCP9OffSxc=
 kcl-lang.io/kcl-plugin v0.5.0/go.mod h1:QnZ5OLcyBw5nOnHpChRHtvBq8wvjwiHu/ZZ8j1dfz48=
-kusionstack.io/kusion v0.11.2-0.20240514022203-5ca1c8269c4d h1:hpGrfHm61GO+r+mT02OCeD0XZMDKmWVdRGHYAalApsI=
-kusionstack.io/kusion v0.11.2-0.20240514022203-5ca1c8269c4d/go.mod h1:EwMbX1T9onzF54CcYXRS/RGElE3jAiD+pP3xreeHjsE=
+kusionstack.io/kusion v0.11.2-0.20240520085534-7feee907069f h1:kHf+gw8po8vUs19vffwuU7xH+oV7mnMeR4xZGDJSfGw=
+kusionstack.io/kusion v0.11.2-0.20240520085534-7feee907069f/go.mod h1:xMr0E5NYCd1iqRphv2LPSCFWAFUbGOeqXWrkypKHlmg=
 sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd h1:EDPBXCAspyGV4jQlpZSudPeMmr1bNJefnuqLsRAsHZo=
 sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd/go.mod h1:B8JuhiUyNFVKdsE8h686QcCxMaH6HrOAZj4vswFpcB0=
 sigs.k8s.io/structured-merge-diff/v4 v4.4.1 h1:150L+0vs/8DA78h1u02ooW1/fFq/Lwr+sGiqlzvrtq4=

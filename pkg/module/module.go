@@ -36,7 +36,7 @@ func (f *FrameworkModuleWrapper) Generate(ctx context.Context, req *proto.Genera
 		return EmptyResponse(), nil
 	}
 
-	// marshal resources and patchers
+	// marshal resources and patcher
 	var resources [][]byte
 	for _, res := range response.Resources {
 		out, err := yaml.Marshal(res)
@@ -46,18 +46,14 @@ func (f *FrameworkModuleWrapper) Generate(ctx context.Context, req *proto.Genera
 		resources = append(resources, out)
 	}
 
-	var patchers [][]byte
-	for _, patcher := range response.Patchers {
-		out, err := yaml.Marshal(patcher)
-		if err != nil {
-			return nil, fmt.Errorf("marshal patcher failed: %w. patcher:%v", err, patcher)
-		}
-		patchers = append(patchers, out)
+	patcher, err := yaml.Marshal(response.Patcher)
+	if err != nil {
+		return nil, fmt.Errorf("marshal patcher failed: %w. patcher:%v", err, patcher)
 	}
 
 	return &proto.GeneratorResponse{
 		Resources: resources,
-		Patchers:  patchers,
+		Patcher:   patcher,
 	}, nil
 }
 
@@ -81,7 +77,7 @@ type GeneratorRequest struct {
 type GeneratorResponse struct {
 	// Resources represents the generated resources
 	Resources []v1.Resource `json:"resources,omitempty" yaml:"resources,omitempty"`
-	Patchers  []v1.Patcher  `json:"patchers,omitempty" yaml:"patchers,omitempty"`
+	Patcher   *v1.Patcher   `json:"patcher,omitempty" yaml:"patcher,omitempty"`
 }
 
 func NewGeneratorRequest(req *proto.GeneratorRequest) (*GeneratorRequest, error) {
