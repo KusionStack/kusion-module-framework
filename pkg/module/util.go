@@ -34,8 +34,7 @@ func WrapK8sResourceToKusionResource(id string, resource any) (*v1.Resource, err
 	}, nil
 }
 
-// KubernetesResourceID returns the unique ID of a Kubernetes resource
-// based on its type and metadata.
+// KubernetesResourceID returns the ID of a Kubernetes resource based on its type and metadata. Resource ID should be unique in one Spec.
 func KubernetesResourceID(typeMeta metav1.TypeMeta, objectMeta metav1.ObjectMeta) string {
 	// resource id example: apps/v1:Deployment:nginx:nginx-deployment
 	id := typeMeta.APIVersion + ":" + typeMeta.Kind + ":"
@@ -59,38 +58,43 @@ func UniqueAppLabels(projectName, appName string) map[string]string {
 	}
 }
 
-// WrapTFResourceToKusionResource wraps the Terraform resource into the format of
-// the Kusion resource.
+// WrapTFResourceToKusionResource wraps the Terraform resource into the format of the Kusion resource.
 func WrapTFResourceToKusionResource(
-	id string,
-	attributes, extensions map[string]any,
-	denpendsOn []string,
+	providerCfg ProviderConfig,
+	resType string,
+	resourceID string,
+	attributes map[string]interface{},
+	dependsOn []string,
 ) (*v1.Resource, error) {
+
+	extensions, err := TerraformProviderExtensions(providerCfg, resType)
+	if err != nil {
+		return nil, err
+	}
+
 	return &v1.Resource{
-		ID:         id,
+		ID:         resourceID,
 		Type:       v1.Terraform,
 		Attributes: attributes,
-		DependsOn:  denpendsOn,
+		DependsOn:  dependsOn,
 		Extensions: extensions,
 	}, nil
 }
 
 // ProviderConfig contains the full configurations of a specified provider. It is the combination
-// of the specified provider's config in blocks "terraform/required_providers" and "providers" in
-// terraform hcl file, where the former is described by fields Source and Version, and the latter
-// is described by GenericConfig cause different provider has different config.
+// of the specified provider's config in blocks "terraform.required_providers" and "providers" in
+// the terraform hcl file, where the former is described by fields Source and Version, and the latter
+// is described by ProviderMeta.
 type ProviderConfig struct {
 	// Source of the provider.
 	Source string `yaml:"source" json:"source"`
-
 	// Version of the provider.
 	Version string `yaml:"version" json:"version"`
-
-	// GenericConfig is used to describe the config of a specified terraform provider.
-	v1.GenericConfig `yaml:",inline,omitempty" json:",inline,omitempty"`
+	// ProviderMeta is used to describe configs in the terraform hcl "provider" block.
+	ProviderMeta v1.GenericConfig `yaml:"providerMeta" json:"providerMeta"`
 }
 
-// TerraformResourceID returns the Kusion resource ID of the Terraform resource.
+// TerraformResourceID returns the Kusion resource ID of the Terraform resource. Resource ID should be unique in one Spec.
 func TerraformResourceID(providerCfg ProviderConfig, resType, resName string) (string, error) {
 	if providerCfg.Version == "" {
 		return "", ErrEmptyTFProviderVersion
@@ -117,12 +121,15 @@ func TerraformResourceID(providerCfg ProviderConfig, resType, resName string) (s
 }
 
 // TerraformProviderExtensions returns the Kusion resource extension of the Terraform provider.
-func TerraformProviderExtensions(
-	providerCfg ProviderConfig,
-	providerMeta map[string]any, resType string,
-) (map[string]any, error) {
+func TerraformProviderExtensions(providerCfg ProviderConfig, resType string) (map[string]any, error) {
 	if providerCfg.Version == "" {
 		return nil, ErrEmptyTFProviderVersion
+	}
+	if providerCfg.Source == "" {
+		return nil, fmt.Errorf("empty terraform provider source")
+	}
+	if resType == "" {
+		return nil, fmt.Errorf("empty resource type")
 	}
 
 	// Conduct whether to use the default Terraform provider registry host
@@ -141,14 +148,14 @@ func TerraformProviderExtensions(
 
 	return map[string]any{
 		"provider":     providerURL,
-		"providerMeta": providerMeta,
+		"providerMeta": providerCfg.ProviderMeta,
 		"resourceType": resType,
 	}, nil
 }
 
 // TerraformProviderRegion returns the resource region from the Terraform provider configs.
 func TerraformProviderRegion(providerCfg ProviderConfig) string {
-	region, ok := providerCfg.GenericConfig["region"]
+	region, ok := providerCfg.ProviderMeta["region"]
 	if !ok {
 		return ""
 	}
