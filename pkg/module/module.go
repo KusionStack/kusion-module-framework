@@ -46,9 +46,12 @@ func (f *FrameworkModuleWrapper) Generate(ctx context.Context, req *proto.Genera
 		resources = append(resources, out)
 	}
 
-	patcher, err := yaml.Marshal(response.Patcher)
-	if err != nil {
-		return nil, fmt.Errorf("marshal patcher failed: %w. patcher:%v", err, patcher)
+	var patcher []byte
+	if response.Patcher != nil {
+		patcher, err = yaml.Marshal(response.Patcher)
+		if err != nil {
+			return nil, fmt.Errorf("marshal patcher failed: %w. patcher:%v", err, patcher)
+		}
 	}
 
 	return &proto.GeneratorResponse{
