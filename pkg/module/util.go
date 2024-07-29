@@ -7,7 +7,6 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-
 	v1 "kusionstack.io/kusion/pkg/apis/api.kusion.io/v1"
 )
 
@@ -15,8 +14,8 @@ var ErrEmptyTFProviderVersion = errors.New("empty terraform provider version")
 
 var defaultTFHost = "registry.terraform.io"
 
-func WrapK8sResourceToKusionResource(id string, resource any) (*v1.Resource, error) {
-	gvk := resource.(runtime.Object).GetObjectKind().GroupVersionKind().String()
+func WrapK8sResourceToKusionResource(id string, resource runtime.Object) (*v1.Resource, error) {
+	gvk := resource.GetObjectKind().GroupVersionKind().String()
 
 	// fixme: this function converts int to int64 by default
 	unstructured, err := runtime.DefaultUnstructuredConverter.ToUnstructured(resource)
