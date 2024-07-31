@@ -87,12 +87,11 @@ func NewGeneratorRequest(req *proto.GeneratorRequest) (*GeneratorRequest, error)
 	log.Infof("module proto request received:%s", req.String())
 
 	// validate workload
-	if req.Workload == nil {
-		return nil, fmt.Errorf("workload in the request is nil")
-	}
-	w := &v1.Workload{}
-	if err := yamlv2.Unmarshal(req.Workload, w); err != nil {
-		return nil, fmt.Errorf("unmarshal workload failed. %w", err)
+	var w *v1.Workload
+	if req.Workload != nil {
+		if err := yamlv2.Unmarshal(req.Workload, w); err != nil {
+			return nil, fmt.Errorf("unmarshal workload failed. %w", err)
+		}
 	}
 
 	var dc v1.Accessory
