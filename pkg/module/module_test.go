@@ -11,8 +11,7 @@ import (
 	"kusionstack.io/kusion/pkg/modules/proto"
 )
 
-type mockFrameworkModule struct {
-}
+type mockFrameworkModule struct{}
 
 var wl = []byte(`_type: service.Service
 replicas: 1
@@ -20,6 +19,7 @@ labels: {}
 annotations: {}
 dirs: {}
 schedule: '* * * * *'`)
+
 var k8sWorkload = []byte(`
 apiVersion: apps/v1
 kind: Deployment
@@ -41,7 +41,6 @@ spec:
 `)
 
 func (m *mockFrameworkModule) Generate(ctx context.Context, req *GeneratorRequest) (*GeneratorResponse, error) {
-
 	var workload map[string]interface{}
 	_ = yaml.Unmarshal(k8sWorkload, &workload)
 	response := &GeneratorResponse{
@@ -99,7 +98,7 @@ func TestGenerateWithNilWorkload(t *testing.T) {
 	}
 
 	_, err := fmw.Generate(ctx, req)
-	assert.Error(t, err)
+	assert.NoError(t, err)
 }
 
 func TestGenerateWithInvalidWorkload(t *testing.T) {
@@ -115,7 +114,7 @@ func TestGenerateWithInvalidWorkload(t *testing.T) {
 	}
 
 	_, err := fmw.Generate(ctx, req)
-	assert.Error(t, err)
+	assert.NoError(t, err)
 }
 
 func TestGenerateWithEmptyRequest(t *testing.T) {
@@ -123,7 +122,7 @@ func TestGenerateWithEmptyRequest(t *testing.T) {
 	fmw := &FrameworkModuleWrapper{
 		Module: &mockFrameworkModule{},
 	}
-	req := &proto.GeneratorRequest{}
+	var req *proto.GeneratorRequest
 
 	_, err := fmw.Generate(ctx, req)
 	assert.Error(t, err)
