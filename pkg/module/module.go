@@ -2,6 +2,7 @@ package module
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	yamlv2 "gopkg.in/yaml.v2"
@@ -68,7 +69,7 @@ type GeneratorRequest struct {
 	// App represents the application name, which is typically the same as the namespace of Kubernetes resources
 	App string `json:"app" yaml:"app"`
 	// Workload represents the workload configuration
-	Workload *v1.Workload `json:"workload,omitempty" yaml:"workload,omitempty"`
+	Workload v1.Accessory `json:"workload,omitempty" yaml:"workload,omitempty"`
 	// DevConfig is the developer's inputs of this module
 	DevConfig v1.Accessory `json:"devConfig,omitempty" yaml:"devConfig,omitempty"`
 	// PlatformConfig is the platform engineer's inputs of this module
@@ -86,10 +87,15 @@ type GeneratorResponse struct {
 func NewGeneratorRequest(req *proto.GeneratorRequest) (*GeneratorRequest, error) {
 	log.Infof("module proto request received:%s", req.String())
 
+	// validate generator request
+	if req == nil {
+		return nil, errors.New("empty generator request")
+	}
+
 	// validate workload
-	var w *v1.Workload
+	var w v1.Accessory
 	if req.Workload != nil {
-		if err := yamlv2.Unmarshal(req.Workload, w); err != nil {
+		if err := yamlv2.Unmarshal(req.Workload, &w); err != nil {
 			return nil, fmt.Errorf("unmarshal workload failed. %w", err)
 		}
 	}
