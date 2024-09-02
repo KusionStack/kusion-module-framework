@@ -76,6 +76,8 @@ type GeneratorRequest struct {
 	PlatformConfig v1.GenericConfig `json:"platformConfig,omitempty" yaml:"platformConfig,omitempty"`
 	// Context contains workspace-level configurations, such as topologies, server endpoints, metadata, etc.
 	Context v1.GenericConfig `yaml:"context,omitempty" json:"context,omitempty"`
+	// SecretStore represents a secure external location for storing secrets.
+	SecretStore v1.SecretStore `yaml:"secretStore,omitempty" json:"secretStore,omitempty"`
 }
 
 type GeneratorResponse struct {
@@ -121,6 +123,13 @@ func NewGeneratorRequest(req *proto.GeneratorRequest) (*GeneratorRequest, error)
 		}
 	}
 
+	var secretStore v1.SecretStore
+	if req.SecretStore != nil {
+		if err := yaml.Unmarshal(req.SecretStore, &secretStore); err != nil {
+			return nil, fmt.Errorf("unmarshal secret store failed. %w", err)
+		}
+	}
+
 	result := &GeneratorRequest{
 		Project:        req.Project,
 		Stack:          req.Stack,
@@ -129,6 +138,7 @@ func NewGeneratorRequest(req *proto.GeneratorRequest) (*GeneratorRequest, error)
 		DevConfig:      dc,
 		PlatformConfig: pc,
 		Context:        ctx,
+		SecretStore:    secretStore,
 	}
 	out, err := yaml.Marshal(result)
 	if err != nil {

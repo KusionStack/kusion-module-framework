@@ -79,6 +79,7 @@ func TestGenerateWithValidRequest(t *testing.T) {
 		DevConfig:      []byte(`{"key":"value"}`),
 		PlatformConfig: []byte(`{"key":"value"}`),
 		Context:        []byte(`{"key":"value"}`),
+		SecretStore:    []byte(`{"key":"value"}`),
 	}
 
 	resp, err := fmw.Generate(ctx, req)
