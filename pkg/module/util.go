@@ -8,6 +8,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	v1 "kusionstack.io/kusion/pkg/apis/api.kusion.io/v1"
+	"kusionstack.io/kusion/pkg/engine/runtime/terraform/tfops"
+	"kusionstack.io/kusion/pkg/log"
 )
 
 var ErrEmptyTFProviderVersion = errors.New("empty terraform provider version")
@@ -160,4 +162,68 @@ func TerraformProviderRegion(providerCfg ProviderConfig) string {
 	}
 
 	return region.(string)
+}
+
+// PatchHealthPolicyToExtension patch the health policy to the `extensions` field of the resource in the Spec.
+// Support Kubernetes resource only.
+func PatchHealthPolicyToExtension(resource *v1.Resource, healthPolicy string) error {
+	if resource == nil {
+		return fmt.Errorf("resource is nil")
+	}
+
+	healthPolicyMap := make(map[string]any)
+
+	if resource.Extensions == nil {
+		resource.Extensions = make(map[string]interface{})
+	}
+
+	if resource.Type == v1.Kubernetes {
+		healthPolicyMap[v1.FieldKCLHealthCheckKCL] = healthPolicy
+		resource.Extensions[v1.FieldHealthPolicy] = healthPolicyMap
+		return nil
+	}
+
+	log.Warnf("patch health policy to extension skipped for resource %s, resource type %s is not supported", resource.ID, resource.Type)
+
+	return nil
+}
+
+// PatchImportResourcesToExtension patch the imported resource to the `extensions` field of the resource in the Spec.
+// Support TF resource only.
+func PatchImportResourcesToExtension(resource *v1.Resource, importedResource string) error {
+	if resource == nil {
+		return fmt.Errorf("resource is nil")
+	}
+
+	if resource.Extensions == nil {
+		resource.Extensions = make(map[string]interface{})
+	}
+
+	if resource.Type == v1.Terraform {
+		resource.Extensions[tfops.ImportIDKey] = importedResource
+		// remove the resource attribute to avoid update conflict when using terraform import
+		resource.Attributes = make(map[string]interface{})
+		return nil
+	}
+
+	log.Warnf("patch import resource to extension skipped for resource %s, resource type %s is not supported", resource.ID, resource.Type)
+
+	return nil
+}
+
+// PatchKubeConfigPathToExtension patch the kubeConfig path to the `extensions` field of the resource in the Spec.
+// 1. If $KUBECONFIG environment variable is set, then it is used.
+// 2. If not, and the `kubeConfig` in resource extensions is set, then it is used.
+// 3. Otherwise, ${HOME}/.kube/config is used.
+func PatchKubeConfigPathToExtension(resource *v1.Resource, kubeConfigPath string) error {
+	if resource == nil {
+		return fmt.Errorf("resource is nil")
+	}
+
+	if resource.Extensions == nil {
+		resource.Extensions = make(map[string]interface{})
+	}
+	resource.Extensions[v1.ResourceExtensionKubeConfig] = kubeConfigPath
+
+	return nil
 }
