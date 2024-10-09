@@ -20,7 +20,6 @@ func Start(m module.FrameworkModule) {
 		Plugins: map[string]plugin.Plugin{
 			modules.PluginKey: &modules.GRPCPlugin{Impl: &module.FrameworkModuleWrapper{Module: m}},
 		},
-
 		// A non-nil value here enables gRPC serving for this plugin...
 		GRPCServer: plugin.DefaultGRPCServer,
 	})
