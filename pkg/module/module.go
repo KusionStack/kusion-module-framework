@@ -7,9 +7,9 @@ import (
 
 	yamlv2 "gopkg.in/yaml.v2"
 	"gopkg.in/yaml.v3"
-	v1 "kusionstack.io/kusion/pkg/apis/api.kusion.io/v1"
-	"kusionstack.io/kusion/pkg/log"
-	"kusionstack.io/kusion/pkg/modules/proto"
+	v1 "kusionstack.io/kusion-api-go/api.kusion.io/v1"
+	"kusionstack.io/kusion-module-framework/pkg/log"
+	"kusionstack.io/kusion-module-framework/pkg/module/proto"
 )
 
 type FrameworkModule interface {
