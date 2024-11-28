@@ -13,15 +13,15 @@ import (
 )
 
 const (
-	KusionModuleName = "KUSION_MODULE_NAME"
-	KusionTraceID    = "KUSION_TRACE_ID"
+	KusionModuleName = "kusion_module_name"
+	KusionTraceID    = "kusion_trace_id"
 )
 
 func GetModuleLogger(ctx context.Context) hclog.Logger {
 	traceID := getTraceID(ctx)
 	moduleName := getModuleName(ctx)
 	if moduleName == "" {
-		moduleName = "default"
+		moduleName = "kusionstack-default-module"
 	}
 
 	kusionDataDir, _ := kfile.KusionDataFolder()
