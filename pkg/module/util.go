@@ -40,7 +40,8 @@ func WrapK8sResourceToKusionResource(id string, resource runtime.Object) (*v1.Re
 	}, nil
 }
 
-// KubernetesResourceID returns the ID of a Kubernetes resource based on its type and metadata. Resource ID should be unique in one Spec.
+// KubernetesResourceID returns the ID of a Kubernetes resource based on its type and metadata.
+// Resource ID usually should be unique in one resource list.
 func KubernetesResourceID(typeMeta metav1.TypeMeta, objectMeta metav1.ObjectMeta) string {
 	// resource id example: apps/v1:Deployment:nginx:nginx-deployment
 	id := typeMeta.APIVersion + ":" + typeMeta.Kind + ":"
@@ -99,7 +100,8 @@ type ProviderConfig struct {
 	ProviderMeta v1.GenericConfig `yaml:"providerMeta" json:"providerMeta"`
 }
 
-// TerraformResourceID returns the Kusion resource ID of the Terraform resource. Resource ID should be unique in one Spec.
+// TerraformResourceID returns the Kusion resource ID of the Terraform resource.
+// Resource ID usually should be unique in one resource list.
 func TerraformResourceID(providerCfg ProviderConfig, resType, resName string) (string, error) {
 	if providerCfg.Version == "" {
 		return "", ErrEmptyTFProviderVersion
@@ -168,7 +170,7 @@ func TerraformProviderRegion(providerCfg ProviderConfig) string {
 	return region.(string)
 }
 
-// PatchHealthPolicyToExtension patch the health policy to the `extensions` field of the resource in the Spec.
+// PatchHealthPolicyToExtension patch the health policy to the `extensions` field of the Kusion resource.
 // Support Kubernetes resource only.
 func PatchHealthPolicyToExtension(resource *v1.Resource, healthPolicy string) error {
 	if resource == nil {
@@ -192,7 +194,7 @@ func PatchHealthPolicyToExtension(resource *v1.Resource, healthPolicy string) er
 	return nil
 }
 
-// PatchImportResourcesToExtension patch the imported resource to the `extensions` field of the resource in the Spec.
+// PatchImportResourcesToExtension patch the imported resource to the `extensions` field of the Kusion resource.
 // Support TF resource only.
 func PatchImportResourcesToExtension(resource *v1.Resource, importedResource string) error {
 	if resource == nil {
@@ -215,7 +217,7 @@ func PatchImportResourcesToExtension(resource *v1.Resource, importedResource str
 	return nil
 }
 
-// PatchKubeConfigPathToExtension patch the kubeConfig path to the `extensions` field of the resource in the Spec.
+// PatchKubeConfigPathToExtension patch the kubeConfig path to the `extensions` field of the Kusion resource.
 // 1. If $KUBECONFIG environment variable is set, then it is used.
 // 2. If not, and the `kubeConfig` in resource extensions is set, then it is used.
 // 3. Otherwise, ${HOME}/.kube/config is used.
@@ -236,35 +238,6 @@ func PatchKubeConfigPathToExtension(resource *v1.Resource, kubeConfigPath string
 var IgnoreModules = map[string]bool{
 	"service": true,
 	"job":     true,
-}
-
-// CallGeneratorFuncs calls each NewGeneratorFunc in the given slice
-// and returns a slice of Generator instances.
-func CallGeneratorFuncs(newGenerators ...NewGeneratorFunc) ([]Generator, error) {
-	gs := make([]Generator, 0, len(newGenerators))
-	for _, newGenerator := range newGenerators {
-		if g, err := newGenerator(); err != nil {
-			return nil, err
-		} else {
-			gs = append(gs, g)
-		}
-	}
-	return gs, nil
-}
-
-// CallGenerators calls the Generate method of each Generator instance
-// returned by the given NewGeneratorFuncs.
-func CallGenerators(i *v1.Spec, newGenerators ...NewGeneratorFunc) error {
-	gs, err := CallGeneratorFuncs(newGenerators...)
-	if err != nil {
-		return err
-	}
-	for _, g := range gs {
-		if err := g.Generate(i); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 // ForeachOrdered executes the given function on each
@@ -319,32 +292,6 @@ func MergeMaps(maps ...map[string]string) map[string]string {
 // the resource id and name with the "$kusion_path" prefix.
 func KusionPathDependency(id, name string) string {
 	return "$kusion_path." + id + "." + name
-}
-
-// AppendToSpec adds a Kubernetes resource to the Spec resources slice.
-func AppendToSpec(resourceType v1.Type, resourceID string, i *v1.Spec, resource any) error {
-	// this function is only used for Kubernetes resources
-	if resourceType != v1.Kubernetes {
-		return errors.New("AppendToSpec is only used for Kubernetes resources")
-	}
-
-	gvk := resource.(runtime.Object).GetObjectKind().GroupVersionKind().String()
-	// fixme: this function converts int to int64 by default
-	unstructured, err := runtime.DefaultUnstructuredConverter.ToUnstructured(resource)
-	if err != nil {
-		return err
-	}
-	r := v1.Resource{
-		ID:         resourceID,
-		Type:       resourceType,
-		Attributes: unstructured,
-		DependsOn:  nil,
-		Extensions: map[string]any{
-			v1.ResourceExtensionGVK: gvk,
-		},
-	}
-	i.Resources = append(i.Resources, r)
-	return nil
 }
 
 // PatchResource patches the resource with the given patch.
