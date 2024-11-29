@@ -212,7 +212,7 @@ func TestFindDependKinds(t *testing.T) {
 		"PersistentVolume",
 		"PersistentVolumeClaim",
 	}
-	actual := r.findDependKinds(defaultOrderedKinds)
+	actual := r.findDependKinds(DefaultOrderedKinds)
 
 	assert.Equal(t, expected, actual)
 }
