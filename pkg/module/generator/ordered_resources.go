@@ -10,8 +10,8 @@ import (
 
 type resource v1.Resource
 
-// defaultOrderedKinds provides the default order of Kubernetes resource kinds.
-var defaultOrderedKinds = []string{
+// DefaultOrderedKinds provides the default order of Kubernetes resource kinds.
+var DefaultOrderedKinds = []string{
 	"Namespace",
 	"ResourceQuota",
 	"StorageClass",
@@ -42,7 +42,7 @@ var defaultOrderedKinds = []string{
 // in a specified order.
 func OrderedResources(ctx context.Context, resources v1.Resources, orderedKinds []string) (v1.Resources, error) {
 	if len(orderedKinds) == 0 {
-		orderedKinds = defaultOrderedKinds
+		orderedKinds = DefaultOrderedKinds
 	}
 
 	if len(resources) == 0 {
