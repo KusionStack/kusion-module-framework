@@ -95,7 +95,7 @@ var (
 	ProcessCPUPercent = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "process_cpu_percent",
-			Help: "How many percent of the CPU time process uses.",
+			Help: "How many percent of the cpu time process uses.",
 		},
 		[]string{"hostname", "pid", "pid_name", "ppid"},
 	)
