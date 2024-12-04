@@ -148,12 +148,12 @@ func InitProcessMetricsServer(listenAddress string) <-chan error {
 	customRegistry.MustRegister(ProcessRequestDuration)
 	customRegistry.MustRegister(ProcessPerRequestDuration)
 
-	var errCH chan error
+	var errChan chan error
 	go func() {
 		http.Handle("/process/metrics", promhttp.HandlerFor(customRegistry, promhttp.HandlerOpts{}))
-		errCH <- http.ListenAndServe(listenAddress, nil)
+		errChan <- http.ListenAndServe(listenAddress, nil)
 	}()
-	return errCH
+	return errChan
 }
 
 func RecordProcessResourceUsageMetrics(pid int32) error {
@@ -228,11 +228,11 @@ func CollectProcessInfo(pid int32) (*ProcessInfo, error) {
 	}
 	memoryPercent, err := p.MemoryPercent()
 	if err != nil {
-		fmt.Errorf("failed to get process[%v] memory percent: %v", pid, err)
+		return nil, fmt.Errorf("failed to get process[%v] memory percent: %v", pid, err)
 	}
 	memInfo, err := p.MemoryInfo()
 	if err != nil {
-		fmt.Errorf("failed to get process[%v] memory info: %v", pid, err)
+		return nil, fmt.Errorf("failed to get process[%v] memory info: %v", pid, err)
 	}
 
 	pi := &ProcessInfo{
