@@ -6,6 +6,7 @@ require (
 	github.com/bytedance/mockey v1.2.10
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-plugin v1.6.1
+	github.com/hashicorp/terraform-svchost v0.1.1
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.20.5
 	github.com/shirou/gopsutil/v4 v4.24.11
