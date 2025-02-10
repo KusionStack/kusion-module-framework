@@ -48,3 +48,8 @@ type TFProvider struct {
 func (tp TFProvider) String() string {
 	return tp.Hostname.ForDisplay() + resources.SegmentSeparator + tp.Namespace + resources.SegmentSeparator + tp.Type
 }
+
+// String returns an FQN string, intended for use in machine-readable output.
+func (tp TFProvider) IDString() string {
+	return tp.Namespace + resources.SegmentSeparator + tp.Type
+}
