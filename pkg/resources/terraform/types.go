@@ -49,7 +49,7 @@ func (tp TFProvider) String() string {
 	return tp.Hostname.ForDisplay() + resources.SegmentSeparator + tp.Namespace + resources.SegmentSeparator + tp.Type
 }
 
-// String returns an FQN string, intended for use in machine-readable output.
+// IDString returns the ProviderNamespace:ProviderName string, intended for use in a kusion resource ID.
 func (tp TFProvider) IDString() string {
 	return tp.Namespace + resources.SegmentSeparator + tp.Type
 }
