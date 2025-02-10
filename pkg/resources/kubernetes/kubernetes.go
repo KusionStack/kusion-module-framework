@@ -27,11 +27,8 @@ import (
 // its GroupVersionKind and ObjectMeta.
 func ToKusionResourceID(gvk schema.GroupVersionKind, objectMeta metav1.ObjectMeta) string {
 	// resource id example: apps/v1:Deployment:nginx:nginx-deployment
-	if gvk.Group == "" {
-		gvk.Group = "core"
-	}
-
-	id := gvk.Group + resources.SegmentSeparator + gvk.Version + resources.SegmentSeparator + gvk.Kind
+	apiVersion, kind := gvk.ToAPIVersionAndKind()
+	id := apiVersion + resources.SegmentSeparator + kind
 	if objectMeta.Namespace != "" {
 		id += resources.SegmentSeparator + objectMeta.Namespace
 	}

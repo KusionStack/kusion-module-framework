@@ -48,3 +48,8 @@ type TFProvider struct {
 func (tp TFProvider) String() string {
 	return tp.Hostname.ForDisplay() + resources.SegmentSeparator + tp.Namespace + resources.SegmentSeparator + tp.Type
 }
+
+// IDString returns the ProviderNamespace:ProviderName string, intended for use in a kusion resource ID.
+func (tp TFProvider) IDString() string {
+	return tp.Namespace + resources.SegmentSeparator + tp.Type
+}
