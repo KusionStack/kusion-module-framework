@@ -67,25 +67,25 @@ var (
 	}
 )
 
-func TestOrderedResources(t *testing.T) {
+func TestDependsKindsGraphResources(t *testing.T) {
 	tests := []struct {
-		name         string
-		resources    v1.Resources
-		orderedKinds []string
-		resExpected  v1.Resources
-		errExpected  bool
+		name              string
+		resources         v1.Resources
+		dependsKindsGraph map[string][]string
+		resExpected       v1.Resources
+		errExpected       bool
 	}{
 		{
-			name:         "empty resources",
-			resources:    v1.Resources{},
-			orderedKinds: nil,
-			resExpected:  nil,
-			errExpected:  true,
+			name:              "empty resources",
+			resources:         v1.Resources{},
+			dependsKindsGraph: nil,
+			resExpected:       nil,
+			errExpected:       true,
 		},
 		{
-			name:         "resources with default order",
-			resources:    *genOldResources(),
-			orderedKinds: nil,
+			name:              "resources with default graph",
+			resources:         *genOldResources(),
+			dependsKindsGraph: nil,
 			resExpected: v1.Resources{
 				{
 					ID:         "apps/v1:Deployment:foo:bar",
@@ -113,12 +113,11 @@ func TestOrderedResources(t *testing.T) {
 			errExpected: false,
 		},
 		{
-			name:      "resources with specified order",
+			name:      "resources with specified graph",
 			resources: *genOldResources(),
-			orderedKinds: []string{
-				"Deployment",
-				"Service",
-				"Namespace",
+			dependsKindsGraph: map[string][]string{
+				"Service":   {"Deployment"},
+				"Namespace": {"Service", "Deployment"},
 			},
 			resExpected: v1.Resources{
 				{
@@ -139,8 +138,8 @@ func TestOrderedResources(t *testing.T) {
 					Type:       v1.Kubernetes,
 					Attributes: fakeNamespace,
 					DependsOn: []string{
-						"apps/v1:Deployment:foo:bar",
 						"v1:Service:foo:bar",
+						"apps/v1:Deployment:foo:bar",
 					},
 				},
 			},
@@ -150,7 +149,7 @@ func TestOrderedResources(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := OrderedResources(context.Background(), tt.resources, tt.orderedKinds)
+			got, err := OrderedResources(context.Background(), tt.resources, tt.dependsKindsGraph)
 			if (err != nil) != tt.errExpected {
 				t.Errorf("OrderedResources() error = %v, errWanted = %v", err, tt.errExpected)
 			}
@@ -175,11 +174,13 @@ func TestResourceKind(t *testing.T) {
 
 func TestInjectAllDependsOn(t *testing.T) {
 	resources := genOldResources()
-	dependKinds := []string{"Namespace"}
+	dependsKindsGraph := map[string][]string{
+		"Namespace": {},
+	}
 
 	expected := []string{"v1:Namespace:foo"}
 	actual := resource((*resources)[0])
-	actual.injectDependsOn(dependKinds, *resources)
+	actual.injectDependsOn(dependsKindsGraph, *resources)
 
 	assert.Equal(t, expected, actual.DependsOn)
 }
@@ -195,24 +196,15 @@ func TestFindDependKinds(t *testing.T) {
 	expected := []string{
 		"Namespace",
 		"ResourceQuota",
-		"StorageClass",
-		"CustomResourceDefinition",
+		"PersistentVolumeClaim",
 		"ServiceAccount",
 		"PodSecurityPolicy",
-		"Role",
-		"ClusterRole",
-		"RoleBinding",
-		"ClusterRoleBinding",
 		"ConfigMap",
 		"Secret",
-		"Endpoints",
 		"Service",
 		"LimitRange",
-		"PriorityClass",
-		"PersistentVolume",
-		"PersistentVolumeClaim",
 	}
-	actual := r.findDependKinds(DefaultOrderedKinds)
+	actual := r.findDependKinds(DefaultDependsKindsGraph)
 
 	assert.Equal(t, expected, actual)
 }
@@ -231,4 +223,20 @@ func TestFindDependResources(t *testing.T) {
 	actual := findDependResources(dependKind, *resources)
 
 	assert.Equal(t, expected, actual)
+}
+
+func TestDefaultDependsGraphValidation(t *testing.T) {
+	for resourceKind, dependResourceKinds := range DefaultDependsKindsGraph {
+		for _, dependsResourceKind := range dependResourceKinds {
+			if _, exists := DefaultDependsKindsGraph[dependsResourceKind]; !exists {
+				t.Errorf("resource type %q depends on a non-existent resource type %q", resourceKind, dependsResourceKind)
+			}
+		}
+	}
+}
+
+func TestNoCyclesInDefaultDependencyGraph(t *testing.T) {
+	if HasCycleInGraph(DefaultDependsKindsGraph) {
+		t.Errorf("Cycle detected in the dependency graph!")
+	}
 }

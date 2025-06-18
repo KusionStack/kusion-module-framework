@@ -10,39 +10,53 @@ import (
 
 type resource v1.Resource
 
-// DefaultOrderedKinds provides the default order of Kubernetes resource kinds.
-var DefaultOrderedKinds = []string{
-	"Namespace",
-	"ResourceQuota",
-	"StorageClass",
-	"CustomResourceDefinition",
-	"ServiceAccount",
-	"PodSecurityPolicy",
-	"Role",
-	"ClusterRole",
-	"RoleBinding",
-	"ClusterRoleBinding",
-	"ConfigMap",
-	"Secret",
-	"Endpoints",
-	"Service",
-	"LimitRange",
-	"PriorityClass",
-	"PersistentVolume",
-	"PersistentVolumeClaim",
-	"Deployment",
-	"StatefulSet",
-	"CronJob",
-	"PodDisruptionBudget",
-	"MutatingWebhookConfiguration",
-	"ValidatingWebhookConfiguration",
+// DefaultDependsKindsGraph defines the default dependency relationships between
+// Kubernetes resource kinds. This graph maps each resource kind to the list of
+// resource kinds it potentially depends on (not strictly required, but commonly
+// associated in practice).
+//
+// Structure:
+//   - Key: The resource kind (e.g., "Deployment")
+//   - Value: Slice of resource kinds this resource may depend on
+//
+// Example:
+//
+//	"Deployment": {"Namespace", "ServiceAccount", ...}
+var DefaultDependsKindsGraph = map[string][]string{
+	"Namespace":                      {},
+	"ResourceQuota":                  {"Namespace"},
+	"StorageClass":                   {},
+	"CustomResourceDefinition":       {},
+	"ServiceAccount":                 {"Namespace"},
+	"PodSecurityPolicy":              {},
+	"Role":                           {"Namespace"},
+	"ClusterRole":                    {},
+	"RoleBinding":                    {"Namespace", "ServiceAccount", "Role"},
+	"ClusterRoleBinding":             {"ServiceAccount", "ClusterRole"},
+	"ConfigMap":                      {"Namespace"},
+	"Secret":                         {"Namespace"},
+	"Endpoints":                      {"Namespace"},
+	"Service":                        {"Namespace", "Endpoints"},
+	"LimitRange":                     {"Namespace", "StorageClass"},
+	"PriorityClass":                  {},
+	"PersistentVolume":               {"StorageClass"},
+	"PersistentVolumeClaim":          {"Namespace", "ResourceQuota", "StorageClass", "PersistentVolume"},
+	"Deployment":                     {"Namespace", "ResourceQuota", "PersistentVolumeClaim", "ServiceAccount", "PodSecurityPolicy", "ConfigMap", "Secret", "Service", "LimitRange"},
+	"StatefulSet":                    {"Namespace", "ResourceQuota", "PersistentVolumeClaim", "ServiceAccount", "PodSecurityPolicy", "ConfigMap", "Secret", "Service", "LimitRange"},
+	"CronJob":                        {"Namespace", "ResourceQuota", "PersistentVolumeClaim", "ServiceAccount", "PodSecurityPolicy", "ConfigMap", "Secret", "Service", "LimitRange"},
+	"PodDisruptionBudget":            {"Namespace", "Deployment", "StatefulSet", "CronJob"},
+	"MutatingWebhookConfiguration":   {"Namespace", "ServiceAccount", "RoleBinding", "ClusterRoleBinding", "ConfigMap", "Secret", "Service"},
+	"ValidatingWebhookConfiguration": {"Namespace", "ServiceAccount", "RoleBinding", "ClusterRoleBinding", "ConfigMap", "Secret", "Service"},
 }
 
 // OrderedResources returns a list of Kusion Resources with the injected `dependsOn`
 // in a specified order.
-func OrderedResources(ctx context.Context, resources v1.Resources, orderedKinds []string) (v1.Resources, error) {
-	if len(orderedKinds) == 0 {
-		orderedKinds = DefaultOrderedKinds
+func OrderedResources(ctx context.Context, resources v1.Resources, dependsKindsGraph map[string][]string) (v1.Resources, error) {
+	if dependsKindsGraph == nil {
+		dependsKindsGraph = DefaultDependsKindsGraph
+	}
+	if HasCycleInGraph(dependsKindsGraph) {
+		return nil, errors.New("find cycles in giving depends kinds grach")
 	}
 
 	if len(resources) == 0 {
@@ -57,7 +71,7 @@ func OrderedResources(ctx context.Context, resources v1.Resources, orderedKinds 
 
 		// Inject dependsOn of the resource.
 		r := (*resource)(&resources[i])
-		r.injectDependsOn(orderedKinds, resources)
+		r.injectDependsOn(dependsKindsGraph, resources)
 		resources[i] = v1.Resource(*r)
 	}
 
@@ -72,8 +86,8 @@ func (r resource) kubernetesKind() string {
 }
 
 // injectDependsOn injects all dependsOn relationships for the given resource and dependent kinds.
-func (r *resource) injectDependsOn(orderedKinds []string, rs []v1.Resource) {
-	kinds := r.findDependKinds(orderedKinds)
+func (r *resource) injectDependsOn(dependsKindsGraph map[string][]string, rs []v1.Resource) {
+	kinds := r.findDependKinds(dependsKindsGraph)
 	for _, kind := range kinds {
 		drs := findDependResources(kind, rs)
 		r.appendDependsOn(drs)
@@ -88,16 +102,25 @@ func (r *resource) appendDependsOn(dependResources []*v1.Resource) {
 }
 
 // findDependKinds returns the dependent resource kinds for the specified kind.
-func (r *resource) findDependKinds(orderedKinds []string) []string {
+func (r *resource) findDependKinds(dependsKindsGraph map[string][]string) []string {
 	curKind := r.kubernetesKind()
-	dependKinds := make([]string, 0)
-	for _, previousKind := range orderedKinds {
-		if curKind == previousKind {
-			break
+	if _, exists := dependsKindsGraph[curKind]; !exists {
+		depends := []string{}
+		for resourceKinds, resourceKindsDepends := range dependsKindsGraph {
+			depends = append(depends, resourceKinds)
+			for _, resourceKindDepend := range resourceKindsDepends {
+				// if this curKind is depends by other kinds, and not in this graph,
+				// return empty depends.
+				if curKind == resourceKindDepend {
+					return []string{}
+				}
+			}
 		}
-		dependKinds = append(dependKinds, previousKind)
+		// if this curKind is not depends by any other kinds, and not in this graph,
+		// curkind will depends on all kinds in this graph.
+		return depends
 	}
-	return dependKinds
+	return dependsKindsGraph[curKind]
 }
 
 // findDependResources returns the dependent resources of the specified kind.
@@ -109,4 +132,49 @@ func findDependResources(dependKind string, rs []v1.Resource) []*v1.Resource {
 		}
 	}
 	return dependResources
+}
+
+// HasCycleInGraph checks if there's a cycle in the dependency graph.
+// Returns true if a cycle is detected, false otherwise.
+func HasCycleInGraph(graph map[string][]string) bool {
+	// Track visited nodes and recursion stack for cycle detection
+	visited := make(map[string]bool)
+	recursionStack := make(map[string]bool)
+
+	// Check each node in the graph
+	for node := range graph {
+		if !visited[node] {
+			if hasCycle(node, visited, recursionStack, graph) {
+				return true // Cycle detected
+			}
+		}
+	}
+
+	return false // No cycle found
+}
+
+// hasCycle performs DFS to detect cycles recursively
+func hasCycle(node string, visited, recursionStack map[string]bool, graph map[string][]string) bool {
+	if recursionStack[node] {
+		return true // Cycle detected
+	}
+
+	if visited[node] {
+		return false // Already visited and no cycle found
+	}
+
+	// Mark as visited and add to recursion stack
+	visited[node] = true
+	recursionStack[node] = true
+
+	// Recursively check dependencies
+	for _, dep := range graph[node] {
+		if hasCycle(dep, visited, recursionStack, graph) {
+			return true
+		}
+	}
+
+	// Remove from recursion stack after processing
+	recursionStack[node] = false
+	return false
 }
