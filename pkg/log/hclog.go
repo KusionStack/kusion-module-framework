@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"strconv"
 
 	"github.com/hashicorp/go-hclog"
 	"google.golang.org/grpc/metadata"
@@ -13,8 +14,11 @@ import (
 )
 
 const (
-	KusionModuleName = "kusion_module_name"
-	KusionTraceID    = "kusion_trace_id"
+	KusionModuleName          = "kusion_module_name"
+	KusionTraceID             = "kusion_trace_id"
+	KusionModuleLogMaxSize    = "kusion_module_log_max_size"
+	KusionModuleLogMaxBackups = "kusion_module_log_max_backups"
+	KusionModuleLogMaxAge     = "kusion_module_log_max_age"
 )
 
 func GetModuleLogger(ctx context.Context) hclog.Logger {
@@ -26,12 +30,15 @@ func GetModuleLogger(ctx context.Context) hclog.Logger {
 
 	kusionDataDir, _ := kfile.KusionDataFolder()
 	logFile := filepath.Join(kusionDataDir, Folder, "modules", moduleName, fmt.Sprintf("%s.log", moduleName))
+	maxSize, maxBackups, maxAge := getRotationConfigs(ctx)
+
 	lumberjackLogger := &lumberjack.Logger{
-		Filename:  logFile,
-		MaxSize:   10,
-		Compress:  false,
-		LocalTime: true,
-		MaxAge:    28,
+		Filename:   logFile,
+		MaxSize:    maxSize,
+		MaxBackups: maxBackups,
+		MaxAge:     maxAge,
+		Compress:   false,
+		LocalTime:  true,
 	}
 
 	return hclog.New(&hclog.LoggerOptions{
@@ -55,4 +62,43 @@ func getModuleName(ctx context.Context) string {
 		return ""
 	}
 	return names[0]
+}
+
+func getRotationConfigs(ctx context.Context) (logMaxSize, logMaxBackups, logMaxAge int) {
+	var err error
+
+	logMaxSizeStrs := metadata.ValueFromIncomingContext(ctx, KusionModuleLogMaxSize)
+	if len(logMaxSizeStrs) == 0 {
+		// Set the default max size of kusion module logger to 10MB.
+		logMaxSize = 10
+	} else {
+		logMaxSize, err = strconv.Atoi(logMaxSizeStrs[0])
+		if err != nil {
+			logMaxSize = 10
+		}
+	}
+
+	logMaxBackupStrs := metadata.ValueFromIncomingContext(ctx, KusionModuleLogMaxBackups)
+	if len(logMaxBackupStrs) == 0 {
+		// Set the default max backups of kusion module logger to 10.
+		logMaxBackups = 10
+	} else {
+		logMaxBackups, err = strconv.Atoi(logMaxBackupStrs[0])
+		if err != nil {
+			logMaxBackups = 10
+		}
+	}
+
+	logMaxAgeStrs := metadata.ValueFromIncomingContext(ctx, KusionModuleLogMaxAge)
+	if len(logMaxAgeStrs) == 0 {
+		// Set the default max age of kusion module logger to 28 days.
+		logMaxAge = 28
+	} else {
+		logMaxAge, err = strconv.Atoi(logMaxAgeStrs[0])
+		if err != nil {
+			logMaxAge = 28
+		}
+	}
+
+	return
 }

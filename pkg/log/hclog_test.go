@@ -76,3 +76,65 @@ func TestGetModuleName(t *testing.T) {
 		})
 	}
 }
+
+func TestGetRotationConfigs(t *testing.T) {
+	tests := []struct {
+		name             string
+		input            map[string]string
+		wantedMaxSize    int
+		wantedMaxBackups int
+		wantedMaxAge     int
+	}{
+		{
+			name:             "empty input",
+			input:            nil,
+			wantedMaxSize:    10,
+			wantedMaxBackups: 10,
+			wantedMaxAge:     28,
+		},
+		{
+			name: "empty input values",
+			input: map[string]string{
+				KusionModuleLogMaxSize:    "",
+				KusionModuleLogMaxBackups: "",
+				KusionModuleLogMaxAge:     "",
+			},
+			wantedMaxSize:    10,
+			wantedMaxBackups: 10,
+			wantedMaxAge:     28,
+		},
+		{
+			name: "invalid input values",
+			input: map[string]string{
+				KusionModuleLogMaxSize:    "?",
+				KusionModuleLogMaxBackups: "?",
+				KusionModuleLogMaxAge:     "?",
+			},
+			wantedMaxSize:    10,
+			wantedMaxBackups: 10,
+			wantedMaxAge:     28,
+		},
+		{
+			name: "customized valid input values",
+			input: map[string]string{
+				KusionModuleLogMaxSize:    "100",
+				KusionModuleLogMaxBackups: "100",
+				KusionModuleLogMaxAge:     "100",
+			},
+			wantedMaxSize:    100,
+			wantedMaxBackups: 100,
+			wantedMaxAge:     100,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := metadata.NewIncomingContext(context.Background(), metadata.New(tt.input))
+			if gotMaxSize, gotMaxBackups, gotMaxAge := getRotationConfigs(ctx); gotMaxSize != tt.wantedMaxSize ||
+				gotMaxBackups != tt.wantedMaxBackups || gotMaxAge != tt.wantedMaxAge {
+				t.Errorf("getRotationConfigs() = %d, %d, %d want %d, %d, %d", gotMaxSize, gotMaxBackups, gotMaxAge,
+					tt.wantedMaxSize, tt.wantedMaxBackups, tt.wantedMaxAge)
+			}
+		})
+	}
+}
